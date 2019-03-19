@@ -1,0 +1,14 @@
+#!/usr/bin/env ruby
+
+#require File.join(File.dirname(__FILE__),'../lib/butler')
+require 'butler'
+
+if ARGV.length > 1
+	eng = Butler::Engine.new
+	eng.parse_file(ARGV[0])
+  eng.start_job(ARGV[1])
+else
+	STDERR.puts "butler worksheet file needed."
+	STDERR.puts "#{File.basename(__FILE__)} <spec file> <job title>"
+end
+
