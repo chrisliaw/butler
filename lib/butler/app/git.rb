@@ -253,6 +253,7 @@ module Butler
           if sel.include?(:q)
             sel.delete(:q)
           end
+
           break
         else
           ans = @tty.yes?("Hardly any files selected. Try again?")
