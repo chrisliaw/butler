@@ -1,8 +1,12 @@
 
 require 'alog'
 
+if ENV['BUTLER_DEV']
+require_relative "butler/version"
+else
 require "butler/version"
-#require_relative "butler/version"
+end
+
 require_relative "butler/os"
 
 require_relative "butler/engine"

@@ -10,10 +10,12 @@ module Butler
   class Job
     include Alog
     attr_reader :title
+    # first param is always the title
+    # 2nd param is going to be a hash
     def initialize(*args)
-      if args.length > 0
-        params = args[0]
-        @title = params[:title]
+      @title = args[0]
+      if args.length > 1
+        params = args[1]
         @output = params[:output] || STDOUT
         @errOut = params[:error] || STDERR
         @engine = params[:engine]
@@ -27,7 +29,7 @@ module Butler
         instance_eval(&block)
       end
 
-      @output.puts "Job '#{@title}' is completed. (#{Time.now-start} ms) ".green
+      @output.puts "Job '#{@title}' is completed. (#{Time.now-start} s) ".green
     end
 
     def dir(path)
@@ -35,24 +37,25 @@ module Butler
     end
 
     def method_missing(mtd, *args, &block)
-      clog "method_missing #{mtd} / #{args}"
+      clog "method_missing #{mtd} / #{args}", :debug, :job
       if mtd[-1] != '='
         begin
-          
-          if args.length > 0
-            params = args[0]
-          end
+
           params = {}
           params[:working_dir] = @working_dir
           params[:output] = @output
           params[:errOut] = @errOut
           params[:engine] = @engine
+          
+          args << params
 
           obj = mtd
           #mm = mtd.to_s.split("_")
           #obj = mm[0]  
 
-          handler = eval("Butler::#{obj.to_s.classify}.new(params)")
+          clog "Creating Butler::#{obj.to_s.classify}", :debug, :job
+          handler = eval("Butler::#{obj.to_s.classify}.new(*args)")
+          clog "handler is #{handler}", :debug, :job
           
           #if mm.length > 1
           #  handler.send(mm[1], *args, &block)

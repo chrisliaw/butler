@@ -75,6 +75,49 @@ module Butler
       end    
     end
 
+    def uninstall(*args)
+
+      name = args[0]
+      if name != nil
+
+        with_working_dir("#{@exe} uninstall #{name}") do |cmd|
+          c = OS::ExecCommand.call(cmd) do |mod, spec|
+            @output.puts spec[:output].strip
+          end
+
+          if not success?(c)
+            raise JobExecutionException, "Rubygem execution of 'uninstall' command failed with exit code #{c}"
+          end
+        end
+      else
+        @errOut.puts "Name is needed for gem uninstall operation"
+      end    
+    end
+    # end method uninstall()
+    
+    #
+    # method install()
+    def install(*args)
+
+      name = args[0]
+      if name != nil
+
+        with_working_dir("#{@exe} install #{name}") do |cmd|
+          c = OS::ExecCommand.call(cmd) do |mod, spec|
+            @output.puts spec[:output].strip
+          end
+
+          if not success?(c)
+            raise JobExecutionException, "Rubygem execution of 'install' command failed with exit code #{c}"
+          end
+        end
+      else
+        @errOut.puts "Name is needed for gem install operation"
+      end    
+    end
+    # end method uninstall()
+
+
   end
   # end class Rubygem
   # 

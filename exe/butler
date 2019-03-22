@@ -1,12 +1,51 @@
 #!/usr/bin/env ruby
 
-#require File.join(File.dirname(__FILE__),'../lib/butler')
-require 'butler'
+require_relative File.join(File.dirname(__FILE__),'../../lib/butler')
+#require 'butler'
+require 'tty-prompt'
 
-if ARGV.length > 1
-	eng = Butler::Engine.new
-	eng.parse_file(ARGV[0])
-  eng.start_job(ARGV[1])
+if ARGV.length > 0
+
+  # if local folder got a folder named 'butler'
+  # load it too
+  #p Dir[File.join(Dir.getwd,"butler","handler","*.rb")] 
+  Dir[File.join(Dir.getwd,"butler","handler","*.rb")].each do |h|
+    puts "Found custom handler : #{h}"        
+    require h
+  end
+
+  case ARGV[0]
+  when '-v'
+    STDOUT.puts Butler::VERSION
+  when '-e'
+    if ARGV[1] != nil
+      eng = Butler::Engine.new
+      eng.parse_string(ARGV[1])
+    end
+  else
+    begin
+      eng = Butler::Engine.new
+      eng.parse_file(ARGV[0])
+      if ARGV[1] != nil
+        eng.start_job(ARGV[1])
+      else
+        @tty = TTY::Prompt.new
+        sel = @tty.select("Please select a job to execute:") do |m|
+          eng.jobs.each do |k,v|
+            m.choice k.to_s, k
+          end
+          m.choice 'Quit', :q
+        end
+        if sel != :q
+          eng.start_job(sel)
+        else
+          STDOUT.puts "Job sheet done without executing any job"
+        end
+      end
+    rescue TTY::Reader::InputInterrupt
+    end
+  end
+  
 else
 	STDERR.puts "butler worksheet file needed."
 	STDERR.puts "#{File.basename(__FILE__)} <spec file> <job title>"

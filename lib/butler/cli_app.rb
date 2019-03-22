@@ -6,13 +6,12 @@ module Butler
     
     def initialize(*args)
       @expected_status = 0
-      if args.length > 0
-        params = args[0]
-        @working_dir = params[:working_dir]
-        @output = params[:output]
-        @errOut = params[:errOut]
-        @engine = params[:engine]
-      end
+      params = args[-1]
+      @working_dir = params[:working_dir]
+      @output = params[:output]
+      @errOut = params[:errOut]
+      @engine = params[:engine]
+      @logger = params[:logger]
     end   
 
     def parse_block(&block)

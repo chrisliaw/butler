@@ -4,6 +4,7 @@ require "tty-prompt"
 
 module Butler
   class Git < CliApp
+    VERSION = "0.1"
     
     def initialize(params)
       super
@@ -51,7 +52,7 @@ module Butler
 
       loop do
         
-        @tty.say "GIT Commit Console:".yellow
+        @tty.say "GIT Commit Console V#{VERSION}:".yellow
         @tty.say
 
         @tty.say "\nFiles ready to be committed: (#{files[:staged].length} selected)".green
@@ -77,6 +78,7 @@ module Butler
             q.choice key: "r", name: 'Remove staged file', value: :remove_staged
             q.choice key: "c", name: 'Commit staged file', value: :commit
           end
+          q.choice key: "i", name: "Ignore file(s)", value: :ignore
           q.choice key: "d", name: 'Diff a file (modified or new only)', value: :diff
           q.choice key: "q", name: 'Quit', value: :quit
         end
@@ -106,6 +108,12 @@ module Butler
 
           prompt_diff(files)
 
+        when :ignore
+          f = prompt_ignore(files[:untracked])
+          if f.length > 0
+            git_ignore(f)
+          end
+          break
         when :commit 
           msg = @tty.ask("Commit message : ")
           git_commit(msg)
@@ -118,6 +126,45 @@ module Butler
       end
       # end loop
 
+    end
+
+    def prompt_ignore(staged)
+      sel = []
+      loop do
+        sel = @tty.multi_select("Select files to ignore:", per_page: 10) do |m|
+          staged.each do |v|
+            m.choice "#{v}".green, v
+          end
+
+          m.choice "Pattern", :pattern
+          m.choice "Done", :q
+        end
+
+        if sel.length > 0
+          if sel.include?(:q)
+            sel.delete(:q)
+          end
+
+          if sel.include?(:pattern)
+            pattern = @tty.ask("Please provide pattern to ignore for files : ") do |q|
+              q.required
+            end
+            sel.delete(:pattern)
+            sel << pattern
+          end
+
+          break
+        else
+          ans = @tty.yes?("Hardly any files selected. Try again?")
+          if not ans
+            break
+          end
+        end
+        
+      end
+
+      sel
+      
     end
 
     def prompt_diff(files)
@@ -221,6 +268,41 @@ module Butler
       
     end
 
+    def git_ignore(files)
+      root = git_find_root
+      if root != nil and not root.empty?
+        f = File.join(root,".gitignore")
+        begin
+          @ignore = File.open(f,"a")
+          files.each do |f|
+            @ignore.puts f
+          end
+        rescue Exception => ex
+          @logger.ext_error(ex)
+        ensure 
+          @ignore.close if @ignore != nil
+        end
+      else
+        raise JobExecutionException, "Cannot find the git workspace root directory. Not a git workspace?"
+      end   
+    end
+
+    def git_find_root
+      root = ""
+      with_working_dir("#{@exe} rev-parse --show-toplevel") do |cmd|
+        c = OS::ExecCommand.call(cmd) do |mod, spec|
+          root = spec[:output].strip
+        end
+
+        if not success?(c)
+          raise JobExecutionException, "Git execution of find_root command failed with exit code #{c}"
+        end
+        
+      end
+      
+      root
+    end
+    
     def git_diff(file, staged = false)
       with_working_dir("#{@exe} diff #{staged ? '--staged' : ''} --color #{file}") do |cmd|
         c = OS::ExecCommand.call(cmd) do |mod, spec|

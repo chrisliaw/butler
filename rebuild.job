@@ -1,0 +1,25 @@
+
+
+job :rebuild do
+  include_job :uninstall_butler
+  include_job :build_gem 
+  include_job :install_gem
+end
+
+job :uninstall_butler do
+  rubygem do
+    uninstall "butler"
+  end
+end
+
+job :build_gem do
+  rubygem do
+    build 'butler.gemspec'
+  end
+end
+
+job :install_gem do
+  rubygem do
+    install 'butler'
+  end
+end
