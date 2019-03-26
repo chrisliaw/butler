@@ -45,8 +45,8 @@ module Butler
         begin
           instance_eval(st.join("\r\n"))
         rescue Exception => ex
-          @errOut.puts ex.message
-          @logger.ext_error(ex)
+          #@errOut.puts ex.message
+          #@logger.ext_error(ex)
         end
       end
     end

@@ -17,12 +17,12 @@ module Butler
       invoke_method(&block)
     end
 
-    def build(spec, params = {}, &block)
+    def build(spec = nil, params = {}, &block)
 
       if spec != nil and not spec.empty?
       else
         
-        ss = Dir[File.join(@working_dir,"*/*.gemspec")]
+        ss = Dir[File.join(@working_dir,"**/*.gemspec")]
         if ss.length > 0
           sel = @tty.select("Please select one of the gemspec below:") do |m|
             ss.each do |s|
@@ -69,7 +69,7 @@ module Butler
       res = {}
       assess_status(with_working_dir("#{@exe} build #{spec}") do |cmd|
         
-        STDOUT.puts "  Building rubygem spec '#{spec}'".colorize(Butler::WI_HEADER_COLOR)
+        #STDOUT.puts "  Building rubygem spec '#{spec}'".colorize(Butler::WI_HEADER_COLOR)
         OS::ExecCommand.call(cmd) do |mod, spec|
           spec[:output].each_line do |l|
             if l =~ /File:/

@@ -1,9 +1,8 @@
 PATH
   remote: .
   specs:
-    butler (0.1.0)
+    butler (0.2.3)
       activesupport
-      alog
       colorize
       tty-prompt
 
@@ -15,7 +14,6 @@ GEM
       i18n (>= 0.7, < 2)
       minitest (~> 5.1)
       tzinfo (~> 1.1)
-    alog (0.3.0)
     colorize (0.8.1)
     concurrent-ruby (1.1.5)
     equatable (0.5.0)
