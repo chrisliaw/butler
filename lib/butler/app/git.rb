@@ -152,7 +152,7 @@ module Butler
         @tty.say "\nGIT Commit Console V#{VERSION}:".yellow
         @tty.say
 
-        @tty.say "\nFiles ready to be committed: (#{files[:staged].length} selected)".green
+        @tty.say "\nFiles ready to be committed in staging: (#{files[:staged].length} selected)".green
         if files[:staged].length > 0
           files[:staged].each do |st|
             case st[0]
