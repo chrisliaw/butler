@@ -142,6 +142,23 @@ module Butler
     ### End DSL
     ###
 
+    def assist
+      
+      msg = []
+      msg << "git DSL options and usage (V#{VERSION}):"
+      msg << ""
+      msg << "  git do"
+      msg << "    info                 # print out some info for the current git workspace"
+      msg << "    commit               # trigger the commit console"
+      msg << "    tag [name],[msg]     # tag the source code with given name and message. If not given shall be prompted "
+      msg << "    push [repo],[branch] # push the source code to given repository and branch. If not given shall defaulted to 'origin' and 'master'"
+      msg << "    push_tag [repo]      # push the tag to repository"
+      msg << "  end"
+      msg << ""
+      
+      @output.puts msg.join("\n").yellow
+    end
+
     #### 
     #### Implementation
     ####

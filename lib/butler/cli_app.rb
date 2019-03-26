@@ -43,6 +43,9 @@ module Butler
       code.to_i == @expected_status.to_i
     end
 
+    def assist
+      @output.puts "This app developer did not provide any assistance to you. Sorry..."
+    end
     # 
     # construct final command prefix with working dir
     # 

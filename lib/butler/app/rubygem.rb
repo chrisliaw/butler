@@ -6,17 +6,46 @@ require_relative '../cli_app'
 
 module Butler
   class Rubygem < CliApp
+    VERSION = "0.1"
     def initialize(args, &block)
       @exe = "gem"    
       super
       
       # if there is global version value defined
       @rversion = @engine.get(Engine::GKEY_RELEASING_VERSION)
-     
+      @tty = TTY::Prompt.new
       invoke_method(&block)
     end
 
     def build(spec, params = {}, &block)
+
+      if spec != nil and not spec.empty?
+      else
+        
+        ss = Dir[File.join(@working_dir,"*/*.gemspec")]
+        if ss.length > 0
+          sel = @tty.select("Please select one of the gemspec below:") do |m|
+            ss.each do |s|
+              name = s[@working_dir.length..-1]
+              m.choice name, s
+            end
+            
+            m.choice "None of the above", :q
+          end
+
+          if sel != nil and sel != :q
+            spec = sel
+          else
+            @tty.error "Invalid selection for rubygem build command"
+            exit(-1)
+          end
+
+        else
+          @tty.error "Please create an .gemspec file first before calling build"
+          exit(-1)
+        end
+        
+      end
 
       @output.puts "Building gem using spec '#{spec}'".yellow
       #if args.length > 0
@@ -150,6 +179,21 @@ module Butler
     end
     # end update_version()
     # 
+
+    def assist
+      msg = []
+      msg << "rubygem DSL options and usage (V#{VERSION}):"
+      msg << ""
+      msg << "  rubygem do"
+      msg << "    build [spec file]    # build gem with given spec file or prompt for one if not given"
+      msg << "    publish [gem file]   # push the gemfile to rubygems repository"
+      msg << "    install [gem name]   # install the gemfile with given name to system"
+      msg << "    uninstall [gem name] # uninstall the gemfile with given name from system"
+      msg << "  end"
+      msg << "  "
+
+      @output.puts msg.join("\n").yellow
+    end
 
     def prompt_version_file
       tty = TTY::Prompt.new
