@@ -17,6 +17,8 @@ module Butler
     end
 
     def build(spec, params = {}, &block)
+
+      @output.puts "Building gem using spec '#{spec}'".yellow
       #if args.length > 0
       #  @spec = args[0]
       #  params = args[1]
@@ -67,6 +69,7 @@ module Butler
 
     def publish(rel, params = {})
 
+      @output.puts "Publishing gem '#{rel[:file]}'".yellow
       ignoreStatus = false
       #rel = args[0]
       #if rel != nil
@@ -89,6 +92,7 @@ module Butler
 
     def uninstall(name)
 
+      @output.puts "Uninstalling gem '#{name}'".yellow
       #name = args[0]
       if name != nil
 
@@ -106,6 +110,8 @@ module Butler
     #
     # method install()
     def install(name, params = {})
+      
+      @output.puts "Installing gem '#{name}'".yellow
       if name != nil
 
         with_working_dir("#{@exe} install #{name}") do |cmd|
@@ -120,6 +126,7 @@ module Butler
     # end method uninstall()
 
     def update_version(file, version)
+      @output.puts "Updating version in file '#{file}'"
       if file != nil and not file.empty? and File.exist?(file)
 
         workFile = "#{file}.wf"

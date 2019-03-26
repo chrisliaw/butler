@@ -11,21 +11,24 @@ job :rebuild do
 end
 
 job :uninstall_butler do
-  rubygem do
-    uninstall "butler"
-  end
+  rubygem :uninstall, "butler"
+  #rubygem do
+  #  uninstall "butler"
+  #end
 end
 
 job :build_gem do
-  rubygem do
-    build 'butler.gemspec'
-  end
+  rubygem :build, 'butler.gemspec'
+  #rubygem do
+  #  build 'butler.gemspec'
+  #end
 end
 
 job :install_gem do
-  rubygem do
-    install 'butler'
-  end
+  rubygem :install, 'butler'
+  #rubygem do
+  #  install 'butler'
+  #end
 end
 
 job :check_in do
