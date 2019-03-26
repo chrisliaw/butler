@@ -1,5 +1,5 @@
 
-Dir[File.join(File.dirname(__FILE__),"app","**")].each do |d|
+Dir[File.join(File.dirname(__FILE__),"app","*.rb")].each do |d|
   require d
 end
 
