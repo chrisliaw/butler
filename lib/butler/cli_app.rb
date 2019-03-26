@@ -4,7 +4,7 @@ module Butler
   class CliApp
     include Alog
     
-    def initialize(*args, &block)
+    def initialize(args, &block)
       @expected_status = 0
       # last hash is constructed by the system so should be there always
       params = args[-1]
@@ -19,8 +19,21 @@ module Butler
       @logger = params[:logger]
       @job = params[:job]
       @ignoreStatus = params[:ignore_status] || true
+
       @userParams = args[0..-2] # ignore the last one
+      
     end   
+
+    def invoke_method(&block)
+      # support one line invocation 
+      if @userParams != nil and @userParams.size > 0
+        if self.respond_to?(@userParams[0])
+          args = @userParams[1..-1]
+          args = [] if args == nil
+          self.send(@userParams[0], *args, &block) 
+        end
+      end
+    end
 
     def parse_block(&block)
       instance_eval(&block) if block

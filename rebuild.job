@@ -30,7 +30,15 @@ end
 
 job :check_in do
   git :commit
+  git :push, "origin" #,"master"
   git :tag
+  git :push_tag, "origin"
+  #git do
+  #  commit
+  #  push "origin" #,"master"
+  #  tag
+  #  push_tag "origin"
+  #end
 end
 
 

@@ -6,23 +6,15 @@ module Butler
   class Git < CliApp
     VERSION = "0.1"
     
-    def initialize(*args, &block)
+    def initialize(args, &block)
       super
       @exe = "git"
       @tty = TTY::Prompt.new
       @rversion = @engine.get(Engine::GKEY_RELEASING_VERSION)
-      
-      if @userParams != nil and @userParams.size > 0
-        self.send(@userParams[0], @userParams[1..-1], &block) 
-      end
+
+      invoke_method(&block)
     end
 
-    def parse_block(&block)
-      if block
-        instance_eval(&block)
-      end
-    end
-    
     ###
     ### DSL
     ###
@@ -55,28 +47,33 @@ module Butler
     end
 
     # push DSL
-    def push(*args)
-      @tty.say "Pushing source code".yellow
-      if args.length > 0
-        
-        #remote = args[0]
-        #repo = args[1]
-        
-        with_working_dir("#{@exe} push #{args.join(" ")}") do |cmd|
-          assess_status(OS::ExecCommand.call(cmd) do |mod, spec|
-            @output.puts spec[:output].strip
-          end)
-
-        end
-        
+    def push(repo, branch = "master")
+      #@tty.say "Pushing source code".yellow
+      
+      if repo != nil and not repo.empty?
+        @tty.say "Pushing to repository #{repo}#{branch == nil ? "" : " and branch #{branch}"}".yellow
       else
-        raise JobExecutionException, "No destination given for git push"
+        @tty.say "Pushing to default repository origin and branch master".yellow
+        repo = 'origin'
+        branch = 'master' if branch == nil or branch.empty?
       end
+      
+      with_working_dir("#{@exe} push #{repo} #{branch}") do |cmd|
+        assess_status(OS::ExecCommand.call(cmd) do |mod, spec|
+          @output.puts spec[:output].strip
+        end)
+
+      end
+      
     end
     # end push dsl
     # 
-     
-    def info(args)
+
+    def push_tag(repo)
+      push(repo,"--tags")
+    end   
+
+    def info(*args)
 
       @logCnt = -1
       if args.length > 0
@@ -152,7 +149,7 @@ module Butler
 
       loop do
         
-        @tty.say "\n\nGIT Commit Console V#{VERSION}:".yellow
+        @tty.say "\nGIT Commit Console V#{VERSION}:".yellow
         @tty.say
 
         @tty.say "\nFiles ready to be committed: (#{files[:staged].length} selected)".green

@@ -29,6 +29,7 @@ if ARGV.length > 0
     if ARGV[1] != nil
       eng = Butler::Engine.new
       eng.parse_string(ARGV[1])
+      exit(0)
     end
   else
     @job_file = ARGV[0]

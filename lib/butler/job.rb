@@ -71,7 +71,7 @@ module Butler
           #obj = mm[0]  
 
           clog "Creating Butler::#{obj.to_s.classify}", :debug, :job
-          handler = eval("Butler::#{obj.to_s.classify}.new(*args, &block)")
+          handler = eval("Butler::#{obj.to_s.classify}.new(args, &block)")
           clog "handler is #{handler}", :debug, :job
           
           #if mm.length > 1

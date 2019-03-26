@@ -6,15 +6,14 @@ require_relative '../cli_app'
 
 module Butler
   class Rubygem < CliApp
-    def initialize(*args, &block)
-      super
+    def initialize(args, &block)
       @exe = "gem"    
-      @rversion = @engine.get(Engine::GKEY_RELEASING_VERSION)
-
-      if @userParams != nil and @userParams.size > 0
-        self.send(@userParams[0], @userParams[1..-1], &block) 
-      end
+      super
       
+      # if there is global version value defined
+      @rversion = @engine.get(Engine::GKEY_RELEASING_VERSION)
+     
+      invoke_method(&block)
     end
 
     def build(spec, params = {}, &block)
