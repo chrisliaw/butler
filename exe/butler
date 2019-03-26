@@ -16,6 +16,13 @@ Dir[File.join(Dir.getwd,"butler","handler","*.rb")].each do |h|
 end
 
 @tty = TTY::Prompt.new
+JobCanWaitMsg = [
+  "All the above job(s) can wait. I'll take a rain check.",
+  "Skipping around for now",
+  "Another day for job execution. Today is rest day.",
+  "It's weekend! Don't bother me with job.",
+  "Enough job for now. I'll calling it a day."
+]
 
 if ARGV.length > 0
 
@@ -86,7 +93,7 @@ if @job_file != nil and not @job_file.empty?
         eng.jobs.each do |k,v|
           m.choice k.to_s, k
         end
-        m.choice "All the above job items can wait. I'll take a rain check.", :q
+        m.choice JobCanWaitMsg[rand(0..JobCanWaitMsg.length-1)], :q
       end
       if sel != :q
         eng.start_job(sel)
