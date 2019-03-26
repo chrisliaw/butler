@@ -4,14 +4,22 @@ module Butler
   class CliApp
     include Alog
     
-    def initialize(*args)
+    def initialize(*args, &block)
       @expected_status = 0
+      # last hash is constructed by the system so should be there always
       params = args[-1]
-      @working_dir = params[:working_dir]
+      if params[:working_dir] != nil
+        @working_dir = File.expand_path(params[:working_dir])
+      else
+        @working_dir = File.expand_path(Dir.getwd)
+      end
       @output = params[:output]
       @errOut = params[:errOut]
       @engine = params[:engine]
       @logger = params[:logger]
+      @job = params[:job]
+      @ignoreStatus = params[:ignore_status] || true
+      @userParams = args[0..-2] # ignore the last one
     end   
 
     def parse_block(&block)
@@ -38,6 +46,30 @@ module Butler
     end
     # end with_working_dir()
     # 
+  
+    def assess_status(st, &block)
+      #if block
+      #  block.call(:error_status, { current: st,  expected: @expected_status })
+      #else
+      if not @ignoreStatus and not success?(st)
+        msg = block(:msg) if block
+        msg = "Cli app return status code : #{st}" if msg == nil or msg.empty?
+        raise JobExecutionException, msg
+      end
+      #end
+    end
+
+    def method_missing(mtd, *args, &block)
+      if @job != nil and @job.respond_to?(mtd.to_sym)
+        @job.send(mtd, *args, &block)
+      elsif @engine != nil and @engine.respond_to?(mtd.to_sym)
+        @engine.send(mtd, *args, &block)
+      else
+        super
+      end      
+    end
+    # end method_missing()
+    #
   
   end
   # end class CliApp

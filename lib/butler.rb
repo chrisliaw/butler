@@ -21,13 +21,14 @@ module Butler
   NL = "\r\n"
 
   Alog::LogFacts[:default] = [STDOUT] 
-  
+ 
   #Alog::LogTag << :os_cmd
   #Alog::LogTag << :job
 
   WI_HEADER_COLOR = :yellow
   WI_DETAILS_COLOR = :blue
-  
+
+  BLogger = Alog::AOlogger.new( { key: :butler_engine, logEng: [:default], active_tag: [] }) #[:global, :butler_engine] }) 
 
 end
 

@@ -66,14 +66,14 @@ module Butler
 
   # ExecCmdOnly proc
   ExecCmdOnly = Proc.new do |cmd, params = {}, &block|
-    stdout, stderr, status = Open3.capture3(cmd)
     clog "Open3 : #{cmd}", :debug, :os_cmd
-
+    stdout, stderr, status = Open3.capture3(cmd)
+    clog "Open3 status : #{status}", :debug, :os_cmd
+    
     if block
-      block.call(:inspect, { data: "", output: stdout, errout: stderr })
+      block.call(:inspect, { data: "", output: stdout, errout: stderr, status: status })
     end
 
-    clog "Open3 status : #{status}", :debug, :os_cmd
     status
   end
   # end ExexCmdOnly proc

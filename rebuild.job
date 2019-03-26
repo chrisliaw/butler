@@ -1,9 +1,13 @@
 
 
 job :rebuild do
+  ver = prompt "Please provide version for this release:", required: true
+  set :releasing_version, ver
+  
   include_job :uninstall_butler
   include_job :build_gem 
   include_job :install_gem
+  include_job :check_in
 end
 
 job :uninstall_butler do
@@ -23,3 +27,10 @@ job :install_gem do
     install 'butler'
   end
 end
+
+job :check_in do
+  git :commit
+  git :tag
+end
+
+

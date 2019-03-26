@@ -6,10 +6,14 @@ module Butler
   class Git < CliApp
     VERSION = "0.1"
     
-    def initialize(params)
+    def initialize(*args, &block)
       super
       @exe = "git"
       @tty = TTY::Prompt.new
+      if @userParams != nil and @userParams.size > 0
+        self.send(@userParams[0], @userParams[1..-1], &block) 
+      end
+      @rversion = @engine.get(Engine::GKEY_RELEASING_VERSION)
     end
 
     def parse_block(&block)
@@ -18,12 +22,36 @@ module Butler
       end
     end
     
+    ###
+    ### DSL
+    ###
+    # Commit DSL
     def commit(*args)
       files = {}
       files.merge!(find_changes([:staged, :modified, :untracked]))
       commit_console(files)
     end
+    # end commit DSL
+    #
 
+    def tag(version = "", msg = "")
+      if version != nil and not version.empty?
+        ver = version
+      elsif @rversion != nil and not @rversion.empty?
+        ver = @rversion
+      else
+        ver = nil
+      end
+      
+      v = @tty.ask("Tag with name #{ver != nil ? "(Default: #{ver})" : ""}", default: ver)
+      if v != nil and not v.empty?
+        msg = @tty.ask("Message of the tag : ", required: true)
+      end
+      
+      git_tag(v,msg)
+    end
+
+    # push DSL
     def push(*args)
       if args.length > 0
         
@@ -31,19 +59,87 @@ module Butler
         repo = args[1]
         
         with_working_dir("#{@exe} push #{remote} #{repo}") do |cmd|
-          c = OS::ExecCommand.call(cmd) do |mod, spec|
+          assess_status(OS::ExecCommand.call(cmd) do |mod, spec|
             @output.puts spec[:output].strip
-          end
+          end)
 
-          if not success?(c)
-            raise JobExecutionException, "Git execution of 'push' command failed with exit code #{c}"
-          end
         end
         
       else
         raise JobExecutionException, "No destination given for git push"
       end
     end
+    # end push dsl
+    # 
+     
+    def info(args)
+
+      @logCnt = -1
+      if args.length > 0
+        cnt = 0
+        args[0].each do |a|
+          if a == '-log-entry'
+            @logCnt = args[0][cnt+1]
+            cnt += 2
+          else
+            cnt += 1
+          end
+        end
+      end
+      
+      # global config
+      @tty.say "Git Global Config:".yellow
+      git_config("--global -l") do |res|
+        res[:output].each_line do |l|
+          @output.print " #{l.colorize(:green)}"
+        end
+      end    
+      @tty.say "Git Local Config:".yellow
+      git_config("--local -l") do |res|
+        res[:output].each_line do |l|
+          @output.print " #{l.colorize(:green)}"
+        end
+      end
+      @tty.say "Git Remote Config:".yellow
+      rem = git_remote
+      if rem.length > 0
+        @tty.say " #{rem.keys.length} remote repository defined:".green
+        rem.each do |k,v|
+          v.each do |kk,vv|
+            @tty.say " #{k} : #{vv} [#{kk}]".green
+          end
+        end
+      else
+        @tty.error " No remote repository defined"
+        @tty.say
+      end
+      @tty.say "Branches:".yellow
+      br = git_branch
+      if br.length > 0
+        @tty.say " Workspace current branch : #{br[:current]}".green
+        if br[:others] != nil and br[:others].length > 0
+          @tty.say " Other branches:"
+          br[:others].each do |b|
+            @tty.say "  #{b}".green
+          end
+        end
+      else
+        @tty.error "No branch info available."
+        @tty.say
+      end
+
+      @tty.say "Log Entry #{@logCnt.to_i < 0 ? "latest #{@logCnt.to_i*-1}" : "oldest #{@logCnt}"}:".yellow
+      git_log(@logCnt) do |res|
+        res[:output].each_line do |l|
+          @output.print " #{l}".green
+        end
+      end
+
+      @output.puts 
+    end
+    ###
+    ### End DSL
+    ###
 
     #### 
     #### Implementation
@@ -52,7 +148,7 @@ module Butler
 
       loop do
         
-        @tty.say "GIT Commit Console V#{VERSION}:".yellow
+        @tty.say "\n\nGIT Commit Console V#{VERSION}:".yellow
         @tty.say
 
         @tty.say "\nFiles ready to be committed: (#{files[:staged].length} selected)".green
@@ -100,6 +196,12 @@ module Butler
           if f.length > 0
             git_unstage(f)
           end
+
+          if f.length > 1
+            @tty.ok "Selected files removed from staging."
+          else
+            @tty.ok "'#{f[0]}' removed from staging."
+          end
           
           # refresh the record
           files = find_changes(files.keys)
@@ -113,9 +215,8 @@ module Butler
           if f.length > 0
             git_ignore(f)
           end
-          break
         when :commit 
-          msg = @tty.ask("Commit message : ")
+          msg = @tty.ask("Commit message : ", required: true) 
           git_commit(msg)
           @tty.say "Changes commited to git.".green
           break
@@ -147,7 +248,7 @@ module Butler
 
           if sel.include?(:pattern)
             pattern = @tty.ask("Please provide pattern to ignore for files : ") do |q|
-              q.required
+              q.required true
             end
             sel.delete(:pattern)
             sel << pattern
@@ -264,11 +365,20 @@ module Butler
         
       end
 
-      p sel
       sel
       
     end
+    
+    def prompt_tag(tag)
 
+      msg = @tty.ask("Tag message for tag '#{tag}' : ", required: true)
+      git_tag(tag,msg)
+     
+    end
+
+    ## 
+    ## Git call
+    ##
     def git_ignore(files)
       root = git_find_root
       if root != nil and not root.empty?
@@ -290,57 +400,41 @@ module Butler
 
     def git_find_root
       root = ""
-      with_working_dir("#{@exe} rev-parse --show-toplevel") do |cmd|
-        c = OS::ExecCommand.call(cmd) do |mod, spec|
+      assess_status(with_working_dir("#{@exe} rev-parse --show-toplevel") do |cmd|
+        OS::ExecCommand.call(cmd) do |mod, spec|
           root = spec[:output].strip
         end
-
-        if not success?(c)
-          raise JobExecutionException, "Git execution of find_root command failed with exit code #{c}"
-        end
         
-      end
+      end)
       
       root
     end
     
     def git_diff(file, staged = false)
-      with_working_dir("#{@exe} diff #{staged ? '--staged' : ''} --color #{file}") do |cmd|
-        c = OS::ExecCommand.call(cmd) do |mod, spec|
+      assess_status(with_working_dir("#{@exe} diff #{staged ? '--staged' : ''} --color #{file}") do |cmd|
+        OS::ExecCommand.call(cmd) do |mod, spec|
           @output.puts spec[:output].strip
         end
-
-        if not success?(c)
-          raise JobExecutionException, "Git execution of 'diff' command failed with exit code #{c}"
-        end
-      end
+      end)
     end
 
     def git_unstage(files)
-      with_working_dir("#{@exe} reset HEAD #{files.join(" ")}") do |cmd|
+      assess_status(with_working_dir("#{@exe} reset HEAD #{files.join(" ")}") do |cmd|
         c = OS::ExecCommand.call(cmd) do |mod, spec|
           @output.puts spec[:output]
         end
-
-        if not success?(c)
-          raise JobExecutionException, "Git execution of 'reset' command failed with exit code #{c}"
-        end
-      end
+      end)
     end
 
     def git_add(files)
-      with_working_dir("#{@exe} add #{files.join(" ")}") do |cmd|
-        c = OS::ExecCommand.call(cmd)
-
-        if not success?(c)
-          raise JobExecutionException, "Git execution of 'add' command failed with exit code #{c}"
-        end
-      end
+      assess_status(with_working_dir("#{@exe} add #{files.join(" ")}") do |cmd|
+        OS::ExecCommand.call(cmd)
+      end)
     end
 
     def git_commit(msg)
       
-      with_working_dir("#{@exe} commit -m '#{msg}'") do |cmd|
+      assess_status(with_working_dir("#{@exe} commit -m '#{msg}'") do |cmd|
         c = OS::ExecCommand.call(cmd) do |mod, spec|
           @output.puts spec[:output]
         end
@@ -348,10 +442,114 @@ module Butler
         if not success?(c)
           raise JobExecutionException, "Git execution of 'commit' command failed with exit code #{c}"
         end
-      end
+      end)
      
     end
 
+    def git_remote
+      
+      remote = {}
+      
+      assess_status(with_working_dir("#{@exe} remote -vv") do |cmd|
+        OS::ExecCommand.call(cmd) do |mod, spec|
+          #@output.puts spec[:output].strip
+          spec[:output].each_line do |l|
+            sp = l.strip.split(" ")
+            name = sp[0].strip
+            url = sp[1].strip
+            mode = sp[2].gsub("(","").gsub(")","").strip
+            
+            remote[name] = {} if remote[name] == nil
+            remote[name][mode] = url
+            
+          end
+        end
+        
+      end)
+
+      remote
+      
+    end
+
+    def git_tag(tag, msg)
+      assess_status(with_working_dir("#{@exe} tag -a #{tag} -m '#{msg}'") do |cmd|
+        OS::ExecCommand.call(cmd)
+      end)
+    end
+
+    # 
+    # method git_branch
+    # 
+    def git_branch
+      branch = {}
+      
+      assess_status(with_working_dir("#{@exe} branch -ra") do |cmd|
+        OS::ExecCommand.call(cmd) do |mod, spec|
+          #@output.puts spec[:output].strip
+          spec[:output].each_line do |l|
+            sp = l.strip.split(" ")
+            marker = sp[0].strip
+            if marker == "*"
+              branch[:current] = sp[1].strip
+            else
+              branch[:others] = [] if branch[:others] == nil
+              branch[:others] << l.strip
+            end
+          end
+        end
+      end)
+
+      branch
+    end
+    #
+    # end method git_branch
+    # 
+
+    # 
+    # method git_log
+    # 
+    def git_log(*args, &block)
+      
+      assess_status(with_working_dir("#{@exe} log #{args.join(" ")}") do |cmd|
+        OS::ExecCommand.call(cmd) do |mod, spec|
+          if block
+            block.call(spec)
+          else
+            @output.puts spec[:output].strip
+          end
+        end
+        
+      end)
+
+      
+    end
+    # 
+    # end method git_log()
+    # 
+
+    def git_config(*args,&block)
+      
+      assess_status(with_working_dir("#{@exe} config #{args.join(" ")}") do |cmd|
+        OS::ExecCommand.call(cmd) do |mod, spec|
+          if block
+            block.call(spec)
+          else
+            @output.puts spec[:output].strip
+          end
+        end
+        
+      end)
+      
+    end
+
+    ##
+    ## End Git call
+    ##
+
+    ###
+    ### Helpers
+    ###
+    # find_changes() helper
     def find_changes(spec = [:modified, :untracked])
       file = {}
       spec.each do |s|
@@ -389,6 +587,11 @@ module Butler
 
       file
     end
+    # end find_changes() method
+    # 
+    ###
+    ### End helpers
+    ###
 
   end
 end

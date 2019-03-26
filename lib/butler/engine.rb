@@ -3,12 +3,18 @@ require_relative "job"
 
 module Butler
   class Engine
+
+    GKEY_RELEASING_VERSION = :releasing_version
+    
     attr_reader :jobs
+    attr_accessor :gval
     def initialize(*args)
       @jobs = {}
+      @gvar = {}
       @output = STDOUT
       @errOut = STDERR
-      @logger = Alog::AOlogger.new( { key: :butler_engine, logEng: [:default], active_tag: [:global, :butler_engine] }) 
+      @logger = BLogger
+      #@logger = Alog::AOlogger.new( { key: :butler_engine, logEng: [:default], active_tag: [:global, :butler_engine] }) 
       if args.length > 0
         params = args[0]
         @output = params[:output] if params[:output] != nil
@@ -34,10 +40,23 @@ module Butler
         st << "end"
         st << "start_job :cli"
         
-        @logger.debug "Parsing string: #{st.join("\r\n")}"
+        #@logger.debug "Parsing string: #{st.join("\r\n")}"
         
-        instance_eval(st.join("\r\n"))
+        begin
+          instance_eval(st.join("\r\n"))
+        rescue Exception => ex
+          @errOut.puts ex.message
+          @logger.ext_error(ex)
+        end
       end
+    end
+    
+    def set(key, val, params = {})
+      @gvar[key] = val if key != nil
+    end
+
+    def get(key, params = {})
+      @gvar[key]
     end
 
     def job(*args, &block)

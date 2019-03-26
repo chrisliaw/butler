@@ -1,53 +1,100 @@
 #!/usr/bin/env ruby
 
+if ENV['BUTLER_DEV']
 require_relative File.join(File.dirname(__FILE__),'../../lib/butler')
-#require 'butler'
+else
+require 'butler'
+end
 require 'tty-prompt'
+require 'colorize'
+
+# if local folder got a folder named 'butler', load it too
+#p Dir[File.join(Dir.getwd,"butler","handler","*.rb")] 
+Dir[File.join(Dir.getwd,"butler","handler","*.rb")].each do |h|
+  puts "Found custom handler : #{h}"        
+  require h
+end
+
+@tty = TTY::Prompt.new
 
 if ARGV.length > 0
-
-  # if local folder got a folder named 'butler'
-  # load it too
-  #p Dir[File.join(Dir.getwd,"butler","handler","*.rb")] 
-  Dir[File.join(Dir.getwd,"butler","handler","*.rb")].each do |h|
-    puts "Found custom handler : #{h}"        
-    require h
-  end
 
   case ARGV[0]
   when '-v'
     STDOUT.puts Butler::VERSION
+  when '-d'
+    Butler::BLogger.show_all_tags
+    #@job_file = ARGV[1] if ARGV[1] != nil
   when '-e'
     if ARGV[1] != nil
       eng = Butler::Engine.new
       eng.parse_string(ARGV[1])
     end
   else
-    begin
-      eng = Butler::Engine.new
-      eng.parse_file(ARGV[0])
-      if ARGV[1] != nil
-        eng.start_job(ARGV[1])
-      else
-        @tty = TTY::Prompt.new
-        sel = @tty.select("Please select a job to execute:") do |m|
-          eng.jobs.each do |k,v|
-            m.choice k.to_s, k
-          end
-          m.choice 'Quit', :q
-        end
-        if sel != :q
-          eng.start_job(sel)
-        else
-          STDOUT.puts "Job sheet done without executing any job"
-        end
-      end
-    rescue TTY::Reader::InputInterrupt
-    end
+    @job_file = ARGV[0]
   end
-  
-else
-	STDERR.puts "butler worksheet file needed."
-	STDERR.puts "#{File.basename(__FILE__)} <spec file> <job title>"
 end
 
+
+if @job_file == nil or @job_file.empty?
+
+  # auto discovery of the .job file
+  jobs = Dir[File.join(Dir.getwd,"*.job")]
+
+  if jobs.length > 0
+    begin
+      sel = @tty.select("Execute one of the auto found job list?") do |m|
+        jobs.each do |j|
+          name = File.basename(j)
+          m.choice name, name
+        end
+
+        m.choice "None of the above", :q
+      end
+
+      if sel == :q
+        STDOUT.puts "Oppss...You need to provide the job list then".yellow
+        STDERR.puts "#{File.basename(__FILE__)} <spec file> <optional: job title>".yellow
+      else
+        @job_file = sel  
+      end
+      
+    rescue TTY::Reader::InputInterrupt
+      STDOUT.puts
+      STDOUT.puts "Job aborted".yellow
+      @job_file = ""
+    end
+    
+  else
+    STDERR.puts "butler worksheet file needed.".yellow
+    STDERR.puts "#{File.basename(__FILE__)} <spec file> <optional: job title>".yellow
+  end
+
+end 
+
+if @job_file != nil and not @job_file.empty?
+  
+  begin
+    eng = Butler::Engine.new
+    eng.parse_file(@job_file)
+    if ARGV[1] != nil
+      eng.start_job(ARGV[1])
+    else
+      sel = @tty.select("Please select a job item to execute:") do |m|
+        eng.jobs.each do |k,v|
+          m.choice k.to_s, k
+        end
+        m.choice "All the above job items can wait. I'll take a rain check.", :q
+      end
+      if sel != :q
+        eng.start_job(sel)
+      else
+        STDOUT.puts "Job list aborted without executing any job".yellow
+      end
+    end
+  rescue TTY::Reader::InputInterrupt
+    STDOUT.puts
+    STDOUT.puts "Job aborted".yellow
+  end
+
+end
