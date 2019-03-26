@@ -10,10 +10,11 @@ module Butler
       super
       @exe = "git"
       @tty = TTY::Prompt.new
+      @rversion = @engine.get(Engine::GKEY_RELEASING_VERSION)
+      
       if @userParams != nil and @userParams.size > 0
         self.send(@userParams[0], @userParams[1..-1], &block) 
       end
-      @rversion = @engine.get(Engine::GKEY_RELEASING_VERSION)
     end
 
     def parse_block(&block)
@@ -27,6 +28,7 @@ module Butler
     ###
     # Commit DSL
     def commit(*args)
+      @tty.say "Committing source code".yellow
       files = {}
       files.merge!(find_changes([:staged, :modified, :untracked]))
       commit_console(files)
@@ -35,6 +37,7 @@ module Butler
     #
 
     def tag(version = "", msg = "")
+      @tty.say "Tagging source code".yellow
       if version != nil and not version.empty?
         ver = version
       elsif @rversion != nil and not @rversion.empty?
@@ -42,8 +45,8 @@ module Butler
       else
         ver = nil
       end
-      
-      v = @tty.ask("Tag with name #{ver != nil ? "(Default: #{ver})" : ""}", default: ver)
+
+      v = @tty.ask("Tag with name #{ver != nil ? "(Default: #{ver})" : ""}:", default: ver)
       if v != nil and not v.empty?
         msg = @tty.ask("Message of the tag : ", required: true)
       end
@@ -53,12 +56,13 @@ module Butler
 
     # push DSL
     def push(*args)
+      @tty.say "Pushing source code".yellow
       if args.length > 0
         
-        remote = args[0]
-        repo = args[1]
+        #remote = args[0]
+        #repo = args[1]
         
-        with_working_dir("#{@exe} push #{remote} #{repo}") do |cmd|
+        with_working_dir("#{@exe} push #{args.join(" ")}") do |cmd|
           assess_status(OS::ExecCommand.call(cmd) do |mod, spec|
             @output.puts spec[:output].strip
           end)

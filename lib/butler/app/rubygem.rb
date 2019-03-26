@@ -10,6 +10,11 @@ module Butler
       super
       @exe = "gem"    
       @rversion = @engine.get(Engine::GKEY_RELEASING_VERSION)
+
+      if @userParams != nil and @userParams.size > 0
+        self.send(@userParams[0], @userParams[1..-1], &block) 
+      end
+      
     end
 
     def build(spec, params = {}, &block)
