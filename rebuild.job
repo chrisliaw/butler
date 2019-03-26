@@ -44,4 +44,11 @@ job :check_in do
   #end
 end
 
+job :push_github do
+  git do
+    push "github", "master"
+    push_tag "github"
+  end
+end
+
 
