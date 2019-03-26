@@ -44,7 +44,7 @@ end
 
 job :uninstall_butler do
   rubygems :uninstall, "butler"
-	# Following same effect as above
+  # Following same effect as above
   #rubygem do
   #  uninstall "butler"
   #end
@@ -52,7 +52,7 @@ end
 
 job :build_gem do
   rubygems :build, 'butler.gemspec'
-	# Following same effect as above
+  # Following same effect as above
   #rubygem do
   #  build 'butler.gemspec'
   #end
@@ -60,7 +60,7 @@ end
 
 job :install_gem do
   rubygems :install, 'butler'
-	# Following same effect as above
+  # Following same effect as above
   #rubygem do
   #  install 'butler'
   #end
@@ -71,7 +71,7 @@ job :check_in do
   git :push, "origin" #,"master"
   git :tag
   git :push_tag, "origin"
-	# Following same effect as above
+  # Following same effect as above
   #git do
   #  commit
   #  push "origin" #,"master"
@@ -127,7 +127,7 @@ require 'butler'
 
 module Butler
   class Rail < CliApp
-		def initialize(args, &block)
+    def initialize(args, &block)
       super
       # additional setup
     end
@@ -144,19 +144,21 @@ module Butler
     def assist
       # print usage to assist developer
     end
-	end
+  end
 end
 ```
 
 in anyname.job file, you can use the DSL like this:
 
+```ruby
 job :pre_production do
   rails :db_setup, "name"
   # or
   rails do
-		db_setup "name"
+    db_setup "name"
   end
 end
+```
 
 to trigger your DSL. Butler shall load everything inside the butler/handler directory
 
